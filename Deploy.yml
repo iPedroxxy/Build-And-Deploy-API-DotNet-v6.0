@@ -3,7 +3,7 @@ name: Build and Deploy SmartZ API - QAS
 on:
   push:
     branches:
-      - hml/adecoagro     # TODO: Adicione outras branches conforme o cliente
+      - Branch Do Cliente     # TODO: Adicione outras branches conforme o cliente
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: CI-ADECOAGROAPI-HOMOLOGACAO  # TODO: Altere conforme o runner do cliente
+    runs-on: Nome Do Runner Criado  # TODO: Altere conforme o runner do cliente
 
     env:
       PROJECT_PATH: "${{ github.workspace }}/SmartZ.API/SmartZ.API.csproj"
@@ -30,9 +30,9 @@ jobs:
         $branch = "${{ github.ref }}".Split("/")[-1]
 
         switch ($branch) {
-          "adecoagro" {
-            $folder = "AdecoAgroApi"
-            $connSecret = "CONN_ADECOAGRO_HOMOLOG"
+          "cliente" {
+            $folder = "pastaiis"
+            $connSecret = "CONN_CLIENTE_HOMOLOG"
           }
           # TODO: Adicione novos clientes aqui
           default {
@@ -53,7 +53,7 @@ jobs:
     - name: Substituir string de conexão
       run: |
         $conn = switch ("${{ steps.cliente.outputs.secret_name }}") {
-          "CONN_ADECOAGRO_HOMOLOG" { "${{ secrets.CONN_ADECOAGRO_HOMOLOG }}" }
+          "CONN_CLIENTE_HOMOLOG" { "${{ secrets.CONN_CLIENTE_HOMOLOG }}" }
           # TODO: Adicione novos secrets aqui
           default { throw "❌ Secret não definido para esta branch" }
         }
