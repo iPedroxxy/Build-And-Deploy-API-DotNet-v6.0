@@ -7,7 +7,7 @@ Este repositório contém o workflow automatizado de **build e deploy** API DotN
 - Build do projeto `.csproj` em ambiente `net6.0`
 - Substituição dinâmica do `appsettings.json` e string de conexão via secrets
 - Publicação via PowerShell em servidor IIS com backup automático da versão anterior
-- Suporte para múltiplos clientes e branches (`adecoagro`, `atvos`, etc.)
+- Suporte para múltiplos clientes e branches
 - Verificação de permissão de administrador no runner
 
 ### 📦 Estrutura do workflow
