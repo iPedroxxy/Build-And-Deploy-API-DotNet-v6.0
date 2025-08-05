@@ -1,4 +1,4 @@
-name: Build and Deploy SmartZ API - QAS
+name: Build and Deploy API - QAS
 
 on:
   push:
@@ -14,8 +14,8 @@ jobs:
     runs-on: Nome Do Runner Criado  # TODO: Altere conforme o runner do cliente
 
     env:
-      PROJECT_PATH: "${{ github.workspace }}/SmartZ.API/SmartZ.API.csproj"
-      BUILD_PATH: "C:\\SmartzApi"
+      PROJECT_PATH: "${{ github.workspace }}/arquivo.API/arquivo.API.csproj"
+      BUILD_PATH: "C:\\Pasta"
 
     steps:
     - name: Checkout do código
@@ -47,8 +47,8 @@ jobs:
       run: dotnet restore ${{ env.PROJECT_PATH }}
 
     - name: Substituir appsettings.json
-      run: Copy-Item "${{ github.workspace }}/SmartZ.API/appsettings.Production.json" `
-                    -Destination "${{ github.workspace }}/SmartZ.API/appsettings.json" -Force
+      run: Copy-Item "${{ github.workspace }}/arquivo.API/appsettings.Production.json" `
+                    -Destination "${{ github.workspace }}/arquivo.API/appsettings.json" -Force
 
     - name: Substituir string de conexão
       run: |
@@ -58,7 +58,7 @@ jobs:
           default { throw "❌ Secret não definido para esta branch" }
         }
 
-        $file = "${{ github.workspace }}\\SmartZ.API\\appsettings.json"
+        $file = "${{ github.workspace }}\\arquivo.API\\appsettings.json"
         (Get-Content $file) -replace '"DefaultConnection":\s*"[^"]+"', '"DefaultConnection": "' + $conn + '"' |
         Set-Content $file -Force
 
