@@ -1,4 +1,4 @@
-# 🚀 Build & Deploy SmartZ API - Ambiente de QAS
+# 🚀 Build & Deploy - Ambiente de QAS
 
 Este repositório contém o workflow automatizado de **build e deploy** API DotNet 6.0 para ambientes de **Homologação (QAS)**, publicado via **GitHub Actions** diretamente em servidores Windows com IIS.
 
