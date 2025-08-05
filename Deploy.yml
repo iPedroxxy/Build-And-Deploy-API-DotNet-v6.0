@@ -1,0 +1,114 @@
+name: Build and Deploy SmartZ API - QAS
+
+on:
+  push:
+    branches:
+      - hml/adecoagro     # TODO: Adicione outras branches conforme o cliente
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: CI-ADECOAGROAPI-HOMOLOGACAO  # TODO: Altere conforme o runner do cliente
+
+    env:
+      PROJECT_PATH: "${{ github.workspace }}/SmartZ.API/SmartZ.API.csproj"
+      BUILD_PATH: "C:\\SmartzApi"
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v3
+
+    - name: Desabilitar verificação SSL do Git
+      run: git config --global http.sslVerify false
+
+    - name: Determinar cliente (IIS path e secret)
+      id: cliente
+      run: |
+        $branch = "${{ github.ref }}".Split("/")[-1]
+
+        switch ($branch) {
+          "adecoagro" {
+            $folder = "AdecoAgroApi"
+            $connSecret = "CONN_ADECOAGRO_HOMOLOG"
+          }
+          # TODO: Adicione novos clientes aqui
+          default {
+            throw "❌ Branch não mapeada para IIS ou secret"
+          }
+        }
+
+        echo "iis_path=C:\\inetpub\\wwwroot\\$folder" >> $env:GITHUB_OUTPUT
+        echo "secret_name=$connSecret" >> $env:GITHUB_OUTPUT
+
+    - name: Restaurar dependências
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+
+    - name: Substituir appsettings.json
+      run: Copy-Item "${{ github.workspace }}/SmartZ.API/appsettings.Production.json" `
+                    -Destination "${{ github.workspace }}/SmartZ.API/appsettings.json" -Force
+
+    - name: Substituir string de conexão
+      run: |
+        $conn = switch ("${{ steps.cliente.outputs.secret_name }}") {
+          "CONN_ADECOAGRO_HOMOLOG" { "${{ secrets.CONN_ADECOAGRO_HOMOLOG }}" }
+          # TODO: Adicione novos secrets aqui
+          default { throw "❌ Secret não definido para esta branch" }
+        }
+
+        $file = "${{ github.workspace }}\\SmartZ.API\\appsettings.json"
+        (Get-Content $file) -replace '"DefaultConnection":\s*"[^"]+"', '"DefaultConnection": "' + $conn + '"' |
+        Set-Content $file -Force
+
+    - name: Publicar projeto
+      run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --framework net6.0 `
+             --output "${{ env.BUILD_PATH }}" --self-contained false
+
+    - name: Criar pasta de logs (se necessário)
+      run: |
+        $logPath = "${{ env.BUILD_PATH }}\\logs"
+        if (-not (Test-Path $logPath)) {
+          New-Item -ItemType Directory -Path $logPath
+        }
+
+    - name: Remover appsettings extras
+      run: |
+        Get-ChildItem "${{ env.BUILD_PATH }}" -Filter "appsettings.*.json" |
+        Where-Object { $_.Name -ne "appsettings.json" } |
+        Remove-Item -Force
+
+    - name: Verificar permissão de administrador
+      run: |
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent())
+                    .IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (-not $isAdmin) {
+          Write-Error "❌ O runner não tem permissão de administrador."
+          exit 1
+        }
+
+    - name: Parar IIS
+      run: powershell -Command "iisreset /stop"
+
+    - name: Backup da versão atual
+      run: |
+        $path = "${{ steps.cliente.outputs.iis_path }}"
+        $timestamp = Get-Date -Format "yyyyMMddHHmm"
+        if (Test-Path $path) {
+          Copy-Item -Recurse -Force $path "${path}_backup_$timestamp"
+        }
+
+    - name: Limpar publicação atual
+      run: |
+        $path = "${{ steps.cliente.outputs.iis_path }}"
+        if (Test-Path $path) {
+          Remove-Item -Recurse -Force "$path\\*"
+        }
+
+    - name: Copiar nova versão
+      run: |
+        Copy-Item -Recurse -Force "${{ env.BUILD_PATH }}\\*" "${{ steps.cliente.outputs.iis_path }}"
+
+    - name: Reiniciar IIS
+      run: powershell -Command "iisreset /start"
